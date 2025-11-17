@@ -1,54 +1,66 @@
 import streamlit as st
-from streamlit_extras.colored_header import colored_header
-from streamlit_extras.card import card
 
 st.set_page_config(
-    page_title="Security System Plan",
+    page_title="TechNova Security System",
     layout="wide",
     page_icon="🔐"
 )
 
-# ------------------------------------------
-# CUSTOM PAGE STYLING
-# ------------------------------------------
+# ------------------------------------------------------------
+# Beautiful Custom CSS (No external packages required)
+# ------------------------------------------------------------
 st.markdown("""
 <style>
+
+body {
+    background-color: #F7F9FC !important;
+}
+
 .big-title {
-    font-size: 38px !important;
-    color: #2B547E;
+    font-size: 40px !important;
     font-weight: 900;
-}
-.section-title {
-    font-size: 28px !important;
     color: #1F4E79;
-    margin-top: 20px;
-    font-weight: 800;
-}
-.info-box {
-    background: #F0F8FF;
-    padding: 18px;
-    border-radius: 12px;
-    border-left: 6px solid #2B547E;
-    margin-bottom: 10px;
-}
-.metric-card {
-    padding: 20px;
-    background: #EBF5FB;
-    border-radius: 12px;
     text-align: center;
-    box-shadow: 0 0 8px rgba(0,0,0,0.15);
+    margin-bottom: 20px;
 }
+
+.section-box {
+    background: white;
+    padding: 22px;
+    border-radius: 14px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+    border-left: 6px solid #1F4E79;
+}
+
+.sub-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: #1F4E79;
+    margin-bottom: 12px;
+}
+
+.metric-card {
+    background:#EAF2F8;
+    padding:25px;
+    border-radius:12px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+    text-align:center;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='big-title'>🔐 Company Security & Branch Data Protection System</div>", unsafe_allow_html=True)
-st.write("A modern & interactive single-page security planning application.")
+# ------------------------------------------------------------
+# HEADER
+# ------------------------------------------------------------
+st.markdown("<div class='big-title'>🔐 TechNova Cybersecurity & Branch Protection System</div>", unsafe_allow_html=True)
 
-# ------------------------------------------
-# SIDEBAR MENU
-# ------------------------------------------
+# ------------------------------------------------------------
+# SIDEBAR
+# ------------------------------------------------------------
 menu = st.sidebar.radio(
-    "📌 Navigate",
+    "📌 Navigation",
     [
         "Objectives",
         "Existing Security Challenges",
@@ -60,209 +72,193 @@ menu = st.sidebar.radio(
     ]
 )
 
-# =====================================================
-# 1. OBJECTIVES
-# =====================================================
+# ------------------------------------------------------------
+# OBJECTIVES
+# ------------------------------------------------------------
 if menu == "Objectives":
-    st.markdown("<div class='section-title'>🎯 Objectives of Security Plan</div>", unsafe_allow_html=True)
 
-    colored_header("Primary Goals", description="", color_name="blue-70")
+    st.markdown("<div class='sub-title'>🎯 Security Plan Objectives</div>", unsafe_allow_html=True)
 
     st.markdown("""
-    <div class='info-box'>
-    ✔ Protect organizational assets (Digital + Physical)<br>
-    ✔ Maintain CIA Triad — Confidentiality, Integrity, Availability<br>
-    ✔ Prevent unauthorized access & data leakage<br>
+    <div class='section-box'>
+    ✔ Protect all digital & physical assets<br>
+    ✔ Enforce CIA Triad (Confidentiality, Integrity, Availability)<br>
+    ✔ Prevent unauthorized access & internal misuse<br>
+    ✔ Build AI-powered real-time threat detection<br>
     ✔ Strengthen branch-to-branch secure communication<br>
-    ✔ Enable AI-powered real-time threat detection<br>
-    ✔ Build structured incident response capability<br>
-    ✔ Ensure compliance with standards (ISO 27001, GDPR, IT Act)
+    ✔ Implement enterprise-wide encryption<br>
+    ✔ Improve compliance (ISO, GDPR, IT Act)<br>
     </div>
     """, unsafe_allow_html=True)
 
-# =====================================================
-# 2. EXISTING SECURITY CHALLENGES
-# =====================================================
+# ------------------------------------------------------------
+# EXISTING SECURITY CHALLENGES
+# ------------------------------------------------------------
 elif menu == "Existing Security Challenges":
 
-    st.markdown("<div class='section-title'>⚠ Existing Security Challenges</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>⚠ Existing Security Weaknesses</div>", unsafe_allow_html=True)
 
-    cols = st.columns(2)
     challenges = [
         "Weak physical access control",
-        "Outdated firewall configuration",
-        "No encryption between branches",
-        "No centralized monitoring",
-        "Phishing, malware & email risks",
-        "Weak password hygiene",
-        "Lack of incident response plan",
-        "Manual log analysis delays detection"
+        "Unsecured Wi-Fi networks",
+        "Firewall not updated",
+        "Branch-to-branch traffic unencrypted",
+        "Manual log analysis",
+        "High phishing risk",
+        "No AI-based monitoring",
+        "Weak endpoint protection"
     ]
 
+    cols = st.columns(2)
     for i, c in enumerate(challenges):
         with cols[i % 2]:
-            card(title=f"⚠ {c}", text="")
+            st.markdown(f"""
+            <div class='section-box'>
+            ⚠ {c}
+            </div>
+            """, unsafe_allow_html=True)
 
-# =====================================================
-# 3. COMPANY-WIDE SECURITY SYSTEM
-# =====================================================
+# ------------------------------------------------------------
+# COMPANY-WIDE SECURITY SYSTEM
+# ------------------------------------------------------------
 elif menu == "Company-Wide Security System":
 
-    st.markdown("<div class='section-title'>🏢 Company-Wide Security System</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>🏢 Company-Wide Security Framework</div>", unsafe_allow_html=True)
 
     with st.expander("🔐 Physical Security Measures", expanded=True):
-        st.markdown("""
-        - Biometric authentication  
-        - CCTV with face recognition  
-        - Smart ID badges  
-        - Restricted server room access  
-        - Motion & intrusion sensors  
+        st.write("""
+        - Biometric entry  
+        - CCTV + motion detection  
+        - Smart ID access zones  
+        - Restricted server room  
         """)
 
-    with st.expander("🌐 Network Security Measures", expanded=False):
-        st.markdown("""
-        - Next-Gen Firewalls (NGFW)  
-        - IDS/IPS monitoring  
-        - Zero Trust Framework  
-        - DDoS protection  
-        - Secure VPN for remote users  
+    with st.expander("🌐 Network Security Measures"):
+        st.write("""
+        - NGFW (Next-Gen Firewall)  
+        - IDS/IPS  
+        - Zero Trust network model  
+        - Secure VPN  
+        - DDoS Protection  
         """)
 
-    with st.expander("💾 Application & Data Security", expanded=False):
-        st.markdown("""
-        **Encryption**  
-        - AES-256 for data-at-rest  
-        - TLS 1.3 for data-in-transit  
+    with st.expander("💾 Application & Data Security"):
+        st.write("""
+        **Encryption**
+        - AES-256 data-at-rest  
+        - TLS 1.3 data-in-transit  
 
-        **Email Security**  
-        - Anti-phishing gateway  
+        **Endpoint Security**
+        - Anti-ransomware  
+        - EDR monitoring  
+
+        **Email Protection**
         - SPF + DKIM + DMARC  
-
-        **Endpoint Security**  
-        - EDR, Anti-malware, Anti-ransomware  
-
-        **Application Security**  
-        - Secure coding standards  
-        - VAPT / Penetration Testing  
+        - Anti-phishing filters  
         """)
 
-    with st.expander("🤖 AI-Powered Security Monitoring", expanded=False):
-        st.markdown("""
-        - Anomaly detection in real time  
-        - AI-driven bot detection  
+    with st.expander("🤖 AI-Powered Security Monitoring"):
+        st.write("""
+        - AI anomaly detection  
+        - Behavioral analytics  
         - Automated threat scoring  
-        - SOAR-driven alert response  
-        - Behavioral analytics (UEBA)  
+        - Real-time SIEM alerts  
         """)
 
-# =====================================================
-# 4. BRANCH-TO-BRANCH PLAN
-# =====================================================
+# ------------------------------------------------------------
+# BRANCH TO BRANCH SECURITY
+# ------------------------------------------------------------
 elif menu == "Branch-to-Branch Data Security":
-    st.markdown("<div class='section-title'>🏬 Branch-to-Branch Data Security Plan</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='sub-title'>🏬 Branch-to-Branch Encryption & Protection</div>", unsafe_allow_html=True)
 
     st.markdown("""
-    <div class='info-box'>
-    ✔ Encrypted site-to-site VPN tunnel<br>
-    ✔ MPLS dedicated secure lines<br>
-    ✔ Multi-layer encryption gateways<br>
+    <div class='section-box'>
+    ✔ Encrypted VPN tunnels<br>
+    ✔ Dedicated MPLS circuits<br>
     ✔ Central authentication server<br>
-    ✔ Cloud backup with multi-factor encryption<br>
-    ✔ Data integrity hashing (SHA-256)<br>
+    ✔ SHA-256 data integrity verification<br>
+    ✔ Daily encrypted backups<br>
+    ✔ Multi-layer encryption gateways<br>
     </div>
     """, unsafe_allow_html=True)
 
-# =====================================================
-# 5. INCIDENT RESPONSE
-# =====================================================
+# ------------------------------------------------------------
+# INCIDENT RESPONSE PLAN
+# ------------------------------------------------------------
 elif menu == "Incident Response & Recovery":
 
-    st.markdown("<div class='section-title'>🚨 Incident Response & Recovery Plan</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>🚨 Incident Response & Recovery Framework</div>", unsafe_allow_html=True)
 
     steps = [
         "📘 Preparation — Tools, training, playbooks",
-        "🔍 Identification — Detect threats via SIEM & AI",
+        "🔍 Identification — Threat detection via AI + SIEM",
         "🧯 Containment — Stop lateral movement",
-        "🗑 Eradication — Remove malware & threats",
-        "♻ Recovery — Restore systems & services",
-        "📝 Lessons Learned — Update security posture"
+        "🗑 Eradication — Remove threat",
+        "♻ Recovery — Restore operations",
+        "📝 Lessons Learned — Improve future protection"
     ]
 
     for s in steps:
-        card(title=s)
+        st.markdown(f"<div class='section-box'>{s}</div>", unsafe_allow_html=True)
 
-    st.subheader("🔄 Disaster Recovery Objectives")
-    st.markdown("""
-    - Daily encrypted backups  
-    - Hot-standby secondary servers  
-    - Cloud DR site  
-    - **RTO: 2 hours**  
-    - **RPO: 15 minutes**  
-    """)
-
-# =====================================================
-# 6. RESULTS AFTER IMPLEMENTATION
-# =====================================================
+# ------------------------------------------------------------
+# SECURITY RESULTS
+# ------------------------------------------------------------
 elif menu == "Security Implementation Results":
-    st.markdown("<div class='section-title'>📊 Security Impact After Implementation</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>📊 Security Improvements After Deployment</div>", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-    col1.markdown("<div class='metric-card'><h2>70%↓</h2>Unauthorized Access</div>", unsafe_allow_html=True)
-    col2.markdown("<div class='metric-card'><h2>85%↑</h2>Threat Detection Speed</div>", unsafe_allow_html=True)
-    col3.markdown("<div class='metric-card'><h2>99.99%</h2>System Uptime</div>", unsafe_allow_html=True)
+    c1.markdown("<div class='metric-card'><h2>70%↓</h2>Unauthorized Access Attempts</div>", unsafe_allow_html=True)
+    c2.markdown("<div class='metric-card'><h2>85%↑</h2>Threat Detection Speed</div>", unsafe_allow_html=True)
+    c3.markdown("<div class='metric-card'><h2>99.99%</h2>System Uptime</div>", unsafe_allow_html=True)
 
-    st.markdown("""
-    - Malware incidents reduced by **60%**  
-    - Faster data transfer between branches  
-    - Zero major cybersecurity breaches  
-    """)
-
-# =====================================================
-# 7. INTERACTIVE CASE SIMULATION
-# =====================================================
+# ------------------------------------------------------------
+# INTERACTIVE CASE SIMULATOR
+# ------------------------------------------------------------
 elif menu == "Interactive Case Simulator":
 
-    st.markdown("<div class='section-title'>🧪 Interactive Cybersecurity Case Simulator</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-title'>🧪 Cybersecurity Case Simulator</div>", unsafe_allow_html=True)
 
     case = st.selectbox(
-        "Select a Case to Simulate",
+        "Choose Simulation Case",
         [
             "Phishing Attack Detection",
             "Network Intrusion Attempt",
-            "Branch Data Transfer Failure",
-            "Insider Threat Activity",
-            "Malware Outbreak Response"
+            "Branch Data Failure",
+            "Insider Threat",
+            "Malware Outbreak"
         ]
     )
 
-    st.subheader(f"Selected Case: {case}")
+    st.write("---")
 
     if case == "Phishing Attack Detection":
-        email = st.text_area("Paste suspicious email content:")
-        if st.button("Analyze"):
-            st.error("⚠ High Risk Phishing Email Detected!")
+        email = st.text_area("Paste suspicious email:")
+        if st.button("Analyze Email"):
+            st.error("⚠ High-Risk Phishing Pattern Detected!")
 
     elif case == "Network Intrusion Attempt":
-        val = st.slider("Abnormal Traffic Level (%)", 0, 200)
-        if val > 130:
-            st.error("🚨 Intrusion Detected by IDS!")
+        traffic = st.slider("Abnormal Traffic (%)", 0, 200)
+        if traffic > 130:
+            st.error("🚨 Intrusion Detected!")
         else:
-            st.success("Normal Traffic")
+            st.success("No abnormal activity.")
 
-    elif case == "Branch Data Transfer Failure":
-        branch = st.selectbox("Select Branch", ["Mumbai", "Pune", "Delhi"])
+    elif case == "Branch Data Failure":
+        branch = st.selectbox("Select branch", ["Mumbai", "Pune", "Delhi"])
         if st.button("Diagnose"):
-            st.warning(f"⚠ VPN Tunnel Failure in {branch} Branch")
+            st.warning(f"⚠ VPN tunnel down for {branch}!")
 
-    elif case == "Insider Threat Activity":
-        emp = st.text_input("Employee ID:")
+    elif case == "Insider Threat":
+        emp = st.text_input("Enter Employee ID:")
         if st.button("Scan Logs"):
-            st.error(f"🔍 Unusual File Access Detected for {emp}")
+            st.error(f"🔍 Insider anomaly detected for employee {emp}")
 
-    elif case == "Malware Outbreak Response":
-        num = st.number_input("Infected Systems", 1, 300)
-        if num > 40:
-            st.error("🔥 Major Malware Outbreak — Isolation Required!")
+    elif case == "Malware Outbreak":
+        count = st.number_input("Infected systems:", 1, 300)
+        if count > 40:
+            st.error("🔥 Severe outbreak detected — isolate network!")
         else:
-            st.success("Minor infection — Isolated Successfully")
+            st.success("Contained successfully.")
