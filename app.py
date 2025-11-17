@@ -1,300 +1,178 @@
-import streamlit as st
+# app.py
+import os
+import time
+import json
+import secrets
+import re
+from datetime import datetime, timedelta
+from flask import Flask, request, render_template, jsonify, send_from_directory
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-st.set_page_config(
-    page_title="TechNova Cybersecurity System",
-    layout="wide",
-    page_icon="🔐"
-)
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'storage'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs('logs', exist_ok=True)
 
-# -------------------------------------------------------------------
-# GLOBAL THEME (Streamlit Cloud compatible)
-# -------------------------------------------------------------------
+# ---- Simulated central SOC log file ----
+CENTRAL_LOG = 'logs/central.log'
 
-st.markdown("""
-<style>
-/* Main Title */
-.big-title {
-    font-size: 42px;
-    font-weight: 900;
-    text-align: center;
-    color: #1a3c66;
-    margin-bottom: 15px;
-}
+# ---- Simple in-memory IDS / DoS tracker ----
+REQUEST_TRACKER = {}  # key: ip, value: list of timestamps
+DOS_THRESHOLD = 10    # requests
+DOS_WINDOW_SECONDS = 5
 
-/* Section Container */
-.section {
-    background: white;
-    padding: 25px;
-    border-radius: 14px;
-    margin-bottom: 25px;
-    border: 1px solid #d9e2ef;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.09);
-}
+# ---- Simple MFA tokens (for demo) ----
+MFA_TOKENS = {}  # session_id -> token (expire shortly)
 
-/* Section Title */
-.section-title {
-    font-size: 28px;
-    font-weight: 800;
-    color: #1a3c66;
-    margin-bottom: 10px;
-}
 
-/* Bullet points */
-.section ul {
-    font-size: 18px;
-    line-height: 1.6;
-}
+# ---- Helper utilities ----
+def write_log(entry: dict):
+    entry['ts'] = datetime.utcnow().isoformat() + 'Z'
+    with open(CENTRAL_LOG, 'a') as f:
+        f.write(json.dumps(entry) + '\n')
 
-/* Nice cards */
-.card {
-    background: #eef5ff;
-    padding: 18px;
-    border-radius: 10px;
-    margin-bottom: 12px;
-    border-left: 5px solid #1a3c66;
-}
+def check_dlp(text: str):
+    # basic DLP rule examples — block if certain keywords or patterns appear
+    keywords = ['password', 'ssn', 'secret', 'confidential', 'credit card', 'api_key']
+    for kw in keywords:
+        if re.search(r'\b' + re.escape(kw) + r'\b', text, re.IGNORECASE):
+            return True, f"Blocked by DLP rule: keyword '{kw}'"
+    # example: block patterns of 4+ digits groups that might look like card numbers
+    if re.search(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}\b', text):
+        return True, "Blocked by DLP pattern: possible card/ID number"
+    return False, ""
 
-/* Metrics */
-.metric-box {
-    background: #ebf3ff;
-    padding: 25px;
-    border-radius: 14px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 22px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-}
-</style>
-""", unsafe_allow_html=True)
+def simulate_vpn_encrypt(plaintext: bytes, key: bytes=None):
+    # AESGCM 256-bit
+    if key is None:
+        key = AESGCM.generate_key(bit_length=256)
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)
+    ct = aesgcm.encrypt(nonce, plaintext, associated_data=None)
+    return {
+        'key': key.hex(),
+        'nonce': nonce.hex(),
+        'ciphertext': ct.hex()
+    }
 
-# -------------------------------------------------------------------
-# HEADER
-# -------------------------------------------------------------------
-st.markdown("<div class='big-title'>🔐 TechNova Cybersecurity & Branch Protection System</div>", unsafe_allow_html=True)
+def simulate_vpn_decrypt(enc: dict):
+    key = bytes.fromhex(enc['key'])
+    nonce = bytes.fromhex(enc['nonce'])
+    ct = bytes.fromhex(enc['ciphertext'])
+    aesgcm = AESGCM(key)
+    try:
+        pt = aesgcm.decrypt(nonce, ct, associated_data=None)
+        return pt
+    except Exception as e:
+        return None
 
-# -------------------------------------------------------------------
-# SIDEBAR NAVIGATION
-# -------------------------------------------------------------------
-menu = st.sidebar.radio(
-    "📌 Navigate",
-    [
-        "Objectives",
-        "Existing Security Challenges",
-        "Company-Wide Security System",
-        "Branch-to-Branch Data Security",
-        "Incident Response & Recovery",
-        "Security Implementation Results",
-        "Interactive Case Simulator"
-    ]
-)
+def record_request(ip):
+    now = time.time()
+    lst = REQUEST_TRACKER.setdefault(ip, [])
+    lst.append(now)
+    # prune old
+    cutoff = now - DOS_WINDOW_SECONDS
+    REQUEST_TRACKER[ip] = [t for t in lst if t >= cutoff]
+    return len(REQUEST_TRACKER[ip])
 
-# -------------------------------------------------------------------
-# 1. Objectives
-# -------------------------------------------------------------------
-if menu == "Objectives":
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🎯 Security Plan Objectives</div>", unsafe_allow_html=True)
+# ---- Routes ----
 
-    st.markdown("""
-    <ul>
-        <li>Protect physical & digital company assets</li>
-        <li>Implement CIA Triad (Confidentiality, Integrity, Availability)</li>
-        <li>Prevent malware, phishing & internal threats</li>
-        <li>Automate threat monitoring using AI</li>
-        <li>Strengthen branch-to-branch data encryption</li>
-        <li>Ensure compliance (ISO 27001, GDPR, IT Act)</li>
-        <li>Establish fast & structured incident response</li>
-    </ul>
-    """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+@app.route('/')
+def index():
+    # branches list for demo
+    branches = ['Mumbai', 'Bengaluru', 'Hyderabad', 'Pune']
+    return render_template('index.html', branches=branches)
 
-# -------------------------------------------------------------------
-# 2. Existing Security Challenges
-# -------------------------------------------------------------------
-elif menu == "Existing Security Challenges":
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>⚠ Existing Security Weaknesses</div>", unsafe_allow_html=True)
+@app.route('/request-mfa', methods=['POST'])
+def request_mfa():
+    session_id = secrets.token_urlsafe(8)
+    token = f"{secrets.randbelow(999999):06d}"  # 6-digit OTP style
+    MFA_TOKENS[session_id] = {
+        'token': token,
+        'expires': datetime.utcnow() + timedelta(minutes=5)
+    }
+    # In a real system OTP would be emailed/sent; here we return it so user can paste.
+    write_log({'event': 'mfa_requested', 'session': session_id})
+    return jsonify({'session': session_id, 'otp': token, 'note': 'This OTP is for demo only.'})
 
-    challenges = [
-        "Weak physical access control",
-        "Unsecured Wi-Fi & guest network",
-        "Firewall outdated or misconfigured",
-        "Branch traffic not encrypted",
-        "Manual log review (slow detection)",
-        "High email phishing risk",
-        "No automated threat intelligence",
-        "Weak endpoint protection on PCs"
-    ]
+@app.route('/send', methods=['POST'])
+def send():
+    ip = request.remote_addr or 'local'
+    cnt = record_request(ip)
+    if cnt > DOS_THRESHOLD:
+        write_log({'event': 'dos_detected', 'ip': ip, 'count': cnt})
+        return jsonify({'ok': False, 'error': 'DoS/High-rate detected. Request blocked.'}), 429
 
-    for c in challenges:
-        st.markdown(f"<div class='card'>• {c}</div>", unsafe_allow_html=True)
+    data = request.json
+    src = data.get('src')
+    dst = data.get('dst')
+    content = data.get('content', '')
+    session = data.get('session')
+    otp = data.get('otp')
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # MFA check (mock)
+    if session not in MFA_TOKENS:
+        return jsonify({'ok': False, 'error': 'Invalid MFA session. Request an OTP first.'}), 401
+    mrec = MFA_TOKENS[session]
+    if datetime.utcnow() > mrec['expires']:
+        return jsonify({'ok': False, 'error': 'OTP expired.'}), 401
+    if otp != mrec['token']:
+        write_log({'event': 'mfa_failed', 'session': session, 'src': src})
+        return jsonify({'ok': False, 'error': 'Invalid OTP.'}), 401
 
-# -------------------------------------------------------------------
-# 3. Company-Wide Security System
-# -------------------------------------------------------------------
-elif menu == "Company-Wide Security System":
+    # DLP check
+    blocked, reason = check_dlp(content)
+    if blocked:
+        write_log({'event': 'dlp_block', 'src': src, 'dst': dst, 'reason': reason})
+        return jsonify({'ok': False, 'error': reason}), 403
 
-    # Physical Security
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🔐 Physical Security Measures</div>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul>
-        <li>Biometric entry control</li>
-        <li>CCTV surveillance with motion detection</li>
-        <li>Restricted server room access</li>
-        <li>Smart ID badges</li>
-        <li>Fire & intrusion detection sensors</li>
-    </ul>
-    """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Simulate VPN encryption
+    enc = simulate_vpn_encrypt(content.encode('utf-8'))
 
-    # Network Security
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🌐 Network Security Measures</div>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul>
-        <li>Next-Gen Firewall (NGFW)</li>
-        <li>IDS/IPS threat detection</li>
-        <li>Zero Trust access architecture</li>
-        <li>Secure VPN (IPSec/TLS)</li>
-        <li>DDoS protection</li>
-    </ul>
-    """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Save to "encrypted storage" as if delivered to dst branch
+    filename = f"{int(time.time())}_{src}_to_{dst}.json"
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    with open(path, 'w') as f:
+        json.dump({'src': src, 'dst': dst, 'enc': enc}, f, indent=2)
 
-    # Application & Data Security
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>💾 Application & Data Security</div>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul>
-        <li>AES-256 data encryption</li>
-        <li>TLS 1.3 secure communication</li>
-        <li>Email security (SPF, DKIM, DMARC)</li>
-        <li>EDR-based endpoint protection</li>
-        <li>Regular VAPT testing</li>
-    </ul>
-    """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Log to central SOC
+    write_log({'event': 'file_sent', 'src': src, 'dst': dst, 'file': filename})
 
-    # AI Security
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🤖 AI-Powered Security Monitoring</div>", unsafe_allow_html=True)
-    st.markdown("""
-    <ul>
-        <li>AI threat anomaly detection</li>
-        <li>Behavior analytics (UEBA)</li>
-        <li>Automated threat scoring</li>
-        <li>Machine learning for suspicious activity</li>
-        <li>Real-time SIEM alerts</li>
-    </ul>
-    """, unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # consume (delete) OTP after use
+    del MFA_TOKENS[session]
 
-# -------------------------------------------------------------------
-# 4. Branch-to-Branch Data Security
-# -------------------------------------------------------------------
-elif menu == "Branch-to-Branch Data Security":
+    return jsonify({'ok': True, 'saved': filename})
 
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🏬 Secure Branch-to-Branch Data Flow</div>", unsafe_allow_html=True)
+@app.route('/central-logs', methods=['GET'])
+def central_logs():
+    if not os.path.exists(CENTRAL_LOG):
+        return jsonify([])
+    with open(CENTRAL_LOG, 'r') as f:
+        lines = [json.loads(line) for line in f.readlines() if line.strip()]
+    # show most recent 200
+    return jsonify(lines[-200:])
 
-    st.markdown("""
-    <ul>
-        <li>Encrypted site-to-site VPN</li>
-        <li>MPLS secure private network</li>
-        <li>Central authentication server</li>
-        <li>SHA-256 integrity hashing</li>
-        <li>Daily encrypted backups</li>
-        <li>Multi-layer encryption gateways</li>
-    </ul>
-    """, unsafe_allow_html=True)
+@app.route('/storage/<path:fn>', methods=['GET'])
+def get_storage(fn):
+    # retrieve stored encrypted file (simulate branch receiving)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], fn, as_attachment=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+@app.route('/decrypt', methods=['POST'])
+def decrypt_route():
+    data = request.json
+    filename = data.get('filename')
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(path):
+        return jsonify({'ok': False, 'error': 'file not found'}), 404
+    with open(path, 'r') as f:
+        payload = json.load(f)
+    enc = payload['enc']
+    pt = simulate_vpn_decrypt(enc)
+    if pt is None:
+        write_log({'event': 'decrypt_failed', 'file': filename})
+        return jsonify({'ok': False, 'error': 'decryption failed'}), 500
+    write_log({'event': 'file_decrypted', 'file': filename})
+    return jsonify({'ok': True, 'plaintext': pt.decode('utf-8')})
 
-# -------------------------------------------------------------------
-# 5. Incident Response Plan
-# -------------------------------------------------------------------
-elif menu == "Incident Response & Recovery":
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🚨 Incident Response & Recovery Plan</div>", unsafe_allow_html=True)
-
-    steps = [
-        "📘 Preparation — Playbooks, tools, training",
-        "🔍 Identification — Detect using AI + SIEM",
-        "🧯 Containment — Block lateral movement",
-        "🗑 Eradication — Remove malware/attack",
-        "♻ Recovery — Restore systems securely",
-        "📝 Lessons Learned — Update strategy"
-    ]
-
-    for s in steps:
-        st.markdown(f"<div class='card'>{s}</div>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# -------------------------------------------------------------------
-# 6. Security Implementation Results
-# -------------------------------------------------------------------
-elif menu == "Security Implementation Results":
-
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>📊 Measured Security Improvements</div>", unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns(3)
-
-    c1.markdown("<div class='metric-box'>70%↓ Unauthorized Access Attempts</div>", unsafe_allow_html=True)
-    c2.markdown("<div class='metric-box'>85%↑ Threat Detection Speed</div>", unsafe_allow_html=True)
-    c3.markdown("<div class='metric-box'>99.99% System Uptime</div>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# -------------------------------------------------------------------
-# 7. Interactive Case Simulator
-# -------------------------------------------------------------------
-elif menu == "Interactive Case Simulator":
-
-    st.markdown("<div class='section'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>🧪 Real-Time Security Case Simulator</div>", unsafe_allow_html=True)
-
-    case = st.selectbox("Choose a simulation case", [
-        "Phishing Email Detection",
-        "Network Intrusion Attempt",
-        "Branch Data Transfer Failure",
-        "Insider Threat Activity",
-        "Malware Outbreak Response"
-    ])
-
-    st.write(" ")
-
-    if case == "Phishing Email Detection":
-        email = st.text_area("Paste suspicious email content:")
-        if st.button("Analyze Email"):
-            st.error("⚠ Possible Phishing Detected!")
-
-    elif case == "Network Intrusion Attempt":
-        level = st.slider("Unusual Traffic Level (%)", 0, 200)
-        if level > 130:
-            st.error("🚨 Intrusion Alert!")
-        else:
-            st.success("Traffic Normal")
-
-    elif case == "Branch Data Transfer Failure":
-        branch = st.selectbox("Choose branch", ["Mumbai", "Pune", "Delhi"])
-        if st.button("Diagnose Now"):
-            st.warning(f"⚠ VPN Down for {branch}")
-
-    elif case == "Insider Threat Activity":
-        emp = st.text_input("Enter Employee ID:")
-        if st.button("Scan Logs"):
-            st.error(f"🔍 Suspicious Activity Detected for {emp}")
-
-    elif case == "Malware Outbreak Response":
-        count = st.number_input("Number of infected systems:", 1, 300)
-        if count > 40:
-            st.error("🔥 Critical Malware Outbreak — Isolation Required")
-        else:
-            st.success("Minor Infection — Resolved")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+if __name__ == '__main__':
+    app.run(debug=True, host='127.0.0.1', port=5000)
