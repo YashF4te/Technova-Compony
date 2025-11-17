@@ -1,186 +1,56 @@
 import streamlit as st
-from io import BytesIO
 
-# ---------------------- APP CONFIG ----------------------
+# ---------------------- PAGE CONFIG ----------------------
 st.set_page_config(
-    page_title="TechNova Security Case Study",
+    page_title="Interactive TechNova Case Study",
     layout="wide",
-    initial_sidebar_state="expanded"
 )
 
-st.markdown("<h1 style='text-align:center;'>📘 <b>TechNova Security Case Study</b></h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>📘 <b>TechNova Interactive Case Study</b></h1>", unsafe_allow_html=True)
 st.write("---")
 
-# ---------------------- SEARCH BAR ----------------------
-search_query = st.sidebar.text_input("🔍 Search Inside Case Study")
+# ---------------------- SIDEBAR SEARCH ----------------------
+search_query = st.sidebar.text_input("🔍 Search Case Study")
 st.sidebar.write("---")
 
 # ---------------------- CASE STUDY CONTENT ----------------------
-case_study = {
+content = {
     "1. Introduction": '''
-**TechNova Solutions Pvt. Ltd.** is a mid-sized IT service provider with its head office in **Mumbai**
-and branch offices in **Bengaluru, Hyderabad, and Pune**.
+**TechNova Solutions Pvt. Ltd.** is a mid-sized IT service provider in **Mumbai** with branches in  
+**Bengaluru, Hyderabad, and Pune**.
 
-The company was facing cyber threats like:
-- Unauthorized access
-- Data leakage
-- Weak authentication
-- Unsecured inter-branch communication
+Problems faced:
+- Unauthorized access  
+- Data leakage  
+- Weak authentication  
+- Unsecured inter-branch communication  
 
-TechNova created a **Company Security System Plan** and a **Branch-to-Branch Data Security Strategy**.
+A **new security system + data protection strategy** was developed.
 ''',
 
     "2. Objectives of the Security Plan": '''
-The main objectives:
-
-- **Safeguard company data & infrastructure**
-- **Prevent unauthorized access**
-- **Ensure encrypted communication between branches**
-- **Deploy cyberattack detection & response**
-- **AI-driven monitoring & analytics**
-- **Achieve ISO 27001 & GDPR compliance**
+- **Protect company data & infrastructure**  
+- **Block unauthorized access**  
+- **Encrypt branch communications**  
+- **AI-driven cyberattack monitoring**  
+- **Compliance with ISO 27001 & GDPR**  
 ''',
 
     "3. Existing Security Challenges": '''
 ### **3.1 Network Vulnerabilities**
-- No enterprise firewalls
-- No centralized monitoring
+- Basic routers  
+- No central monitoring  
 
 ### **3.2 Weak Access Controls**
-- Password sharing
-- No MFA
-- Poor admin privilege management
+- Password sharing  
+- No MFA  
+- Poor admin control  
 
-### **3.3 Unsecured Branch Data Transfer**
-- Data shared via email without encryption
-- No VPN tunnels
+### **3.3 Unsecured Data Transfer**
+- Email-based file sharing  
+- No VPN  
 
 ### **3.4 Incident Response Gaps**
-- No SOC
-- No log analysis
+- No SOC  
+- No log analysis  
 ''',
-
-    "4. Company-Wide Security System Plan": '''
-TechNova adopted **Defense in Depth** and **Zero Trust Security Model**.
-
-### **4.1 Physical Security**
-- Biometric access
-- AI-powered CCTV
-- RFID cards
-- Fire suppression
-
-### **4.2 Network Security**
-- **Next-Generation Firewalls**
-- **IDS & IPS**
-- **Encrypted IPSec VPN**
-- **VLAN-based segmentation**
-
-### **4.3 Application & Data Security**
-- AES-256 encryption
-- TLS 1.3
-- Patch management
-- RBAC
-- Limited admin access
-
-### **4.4 Identity & Access Management**
-- **MFA for all employees**
-- **Zero Trust Login**
-- Strong password policy
-
-### **4.5 Email & Endpoint Security**
-- EDR protection
-- Secure email gateway
-
-### **4.6 AI-Powered Security Monitoring**
-- Real-time anomaly detection
-- Threat scoring
-- UBA (User Behavior Analytics)
-''',
-
-    "5. Branch-to--Branch Data Security Plan": '''
-### **5.1 Encrypted VPN Mesh**
-- IPSec tunnels
-- Encrypted connectivity
-
-### **5.2 Secure File Transfer System (SFTS)**
-- SFTP / FTPS
-- Encrypted cloud with MFA
-
-### **5.3 Central Log Monitoring**
-- Logs from all branches sent to **central SOC**
-
-### **5.4 Data Loss Prevention**
-Blocks:
-- USB data theft
-- External uploads
-- Sensitive email leaks
-
-### **5.5 Backup Strategy**
-- Daily incremental
-- Weekly full
-- DR site: **Pune**
-''',
-
-    "6. Incident Response & Recovery": '''
-### **6.1 Incident Response Team**
-Includes analysts, IT admins, forensics, network experts.
-
-### **6.2 Response Procedure**
-1. Detection
-2. Containment
-3. Eradication
-4. Recovery
-5. Documentation
-
-### **6.3 Business Continuity**
-Ensures critical services run during incidents.
-''',
-
-    "7. Results After Implementation": '''
-- **80% reduction** in phishing
-- **60% improvement** in secure communication
-- **Zero major breaches**
-- Faster detection
-- Higher employee compliance
-''',
-
-    "8. Conclusion": '''
-TechNova successfully implemented a **multi-layered cybersecurity architecture**, improving infrastructure,
-communication security, monitoring, and compliance.
-
-This showcases how strong planning protects companies from modern cyber threats.
-'''
-}
-
-# ---------------------- SEARCH FILTER ----------------------
-def highlight(text, query):
-    if query.lower() in text.lower():
-        return text.replace(query, f"**🟡 {query}**")
-    return text
-
-# ---------------------- DISPLAY SECTIONS ----------------------
-for title, content in case_study.items():
-    with st.expander(f"📌 {title}", expanded=False):
-        if search_query:
-            st.markdown(highlight(content, search_query), unsafe_allow_html=True)
-        else:
-            st.markdown(content, unsafe_allow_html=True)
-
-# ---------------------- TXT DOWNLOAD ----------------------
-def generate_txt():
-    text_output = ""
-    for title, content in case_study.items():
-        text_output += f"{title}\n{content}\n\n"
-    return text_output
-
-txt_data = generate_txt().encode()
-
-st.write("---")
-st.subheader("📄 Download Case Study")
-
-st.download_button(
-    label="⬇️ Download as TXT",
-    data=txt_data,
-    file_name="TechNova_Case_Study.txt",
-    mime="text/plain"
-)
