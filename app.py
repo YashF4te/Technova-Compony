@@ -1,178 +1,197 @@
-# app.py
-import os
-import time
-import json
-import secrets
-import re
-from datetime import datetime, timedelta
-from flask import Flask, request, render_template, jsonify, send_from_directory
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import streamlit as st
+from io import BytesIO
+from fpdf import FPDF
 
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'storage'
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs('logs', exist_ok=True)
+# ---------------------- APP CONFIG ----------------------
+st.set_page_config(page_title="TechNova Security Case Study",
+                   layout="wide",
+                   initial_sidebar_state="expanded")
 
-# ---- Simulated central SOC log file ----
-CENTRAL_LOG = 'logs/central.log'
+st.markdown("<h1 style='text-align:center;'>📘 <b>TechNova Security Case Study</b></h1>", unsafe_allow_html=True)
+st.write("---")
 
-# ---- Simple in-memory IDS / DoS tracker ----
-REQUEST_TRACKER = {}  # key: ip, value: list of timestamps
-DOS_THRESHOLD = 10    # requests
-DOS_WINDOW_SECONDS = 5
+# ---------------------- SEARCH BAR ----------------------
+search_query = st.sidebar.text_input("🔍 Search Inside Case Study")
+st.sidebar.write("---")
 
-# ---- Simple MFA tokens (for demo) ----
-MFA_TOKENS = {}  # session_id -> token (expire shortly)
+# ---------------------- CASE STUDY DATA ----------------------
+case_study = {
+    "1. Introduction": """
+**TechNova Solutions Pvt. Ltd.** is a mid-sized IT service provider with its head office in **Mumbai** 
+and branch offices in **Bengaluru, Hyderabad, and Pune**.
 
+The company was facing cyber threats like:
+- Unauthorized access  
+- Data leakage  
+- Weak authentication  
+- Unsecured inter-branch communication  
 
-# ---- Helper utilities ----
-def write_log(entry: dict):
-    entry['ts'] = datetime.utcnow().isoformat() + 'Z'
-    with open(CENTRAL_LOG, 'a') as f:
-        f.write(json.dumps(entry) + '\n')
+To solve these issues, TechNova created a **Company Security System Plan** and a **Branch-to-Branch Data Security Strategy**.
+""",
 
-def check_dlp(text: str):
-    # basic DLP rule examples — block if certain keywords or patterns appear
-    keywords = ['password', 'ssn', 'secret', 'confidential', 'credit card', 'api_key']
-    for kw in keywords:
-        if re.search(r'\b' + re.escape(kw) + r'\b', text, re.IGNORECASE):
-            return True, f"Blocked by DLP rule: keyword '{kw}'"
-    # example: block patterns of 4+ digits groups that might look like card numbers
-    if re.search(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}\b', text):
-        return True, "Blocked by DLP pattern: possible card/ID number"
-    return False, ""
+    "2. Objectives of the Security Plan": """
+The main objectives:
 
-def simulate_vpn_encrypt(plaintext: bytes, key: bytes=None):
-    # AESGCM 256-bit
-    if key is None:
-        key = AESGCM.generate_key(bit_length=256)
-    aesgcm = AESGCM(key)
-    nonce = os.urandom(12)
-    ct = aesgcm.encrypt(nonce, plaintext, associated_data=None)
-    return {
-        'key': key.hex(),
-        'nonce': nonce.hex(),
-        'ciphertext': ct.hex()
-    }
+- **Safeguard company data & infrastructure**
+- **Prevent unauthorized access**
+- **Ensure encrypted communication between branches**
+- **Deploy cyberattack detection & response**
+- **AI-driven monitoring & analytics**
+- **Achieve ISO 27001 & GDPR compliance**
+""",
 
-def simulate_vpn_decrypt(enc: dict):
-    key = bytes.fromhex(enc['key'])
-    nonce = bytes.fromhex(enc['nonce'])
-    ct = bytes.fromhex(enc['ciphertext'])
-    aesgcm = AESGCM(key)
-    try:
-        pt = aesgcm.decrypt(nonce, ct, associated_data=None)
-        return pt
-    except Exception as e:
-        return None
+    "3. Existing Security Challenges": """
+### **3.1 Network Vulnerabilities**
+- No enterprise firewalls  
+- No centralized monitoring  
 
-def record_request(ip):
-    now = time.time()
-    lst = REQUEST_TRACKER.setdefault(ip, [])
-    lst.append(now)
-    # prune old
-    cutoff = now - DOS_WINDOW_SECONDS
-    REQUEST_TRACKER[ip] = [t for t in lst if t >= cutoff]
-    return len(REQUEST_TRACKER[ip])
+### **3.2 Weak Access Controls**
+- Password sharing  
+- No MFA  
+- Poor admin privilege management  
 
-# ---- Routes ----
+### **3.3 Unsecured Branch Data Transfer**
+- Data shared via email without encryption  
+- No VPN tunnels  
 
-@app.route('/')
-def index():
-    # branches list for demo
-    branches = ['Mumbai', 'Bengaluru', 'Hyderabad', 'Pune']
-    return render_template('index.html', branches=branches)
+### **3.4 Incident Response Gaps**
+- No SOC  
+- No log analysis  
+""",
 
-@app.route('/request-mfa', methods=['POST'])
-def request_mfa():
-    session_id = secrets.token_urlsafe(8)
-    token = f"{secrets.randbelow(999999):06d}"  # 6-digit OTP style
-    MFA_TOKENS[session_id] = {
-        'token': token,
-        'expires': datetime.utcnow() + timedelta(minutes=5)
-    }
-    # In a real system OTP would be emailed/sent; here we return it so user can paste.
-    write_log({'event': 'mfa_requested', 'session': session_id})
-    return jsonify({'session': session_id, 'otp': token, 'note': 'This OTP is for demo only.'})
+    "4. Company-Wide Security System Plan": """
+TechNova adopted **Defense in Depth** and **Zero Trust Security Model**.
 
-@app.route('/send', methods=['POST'])
-def send():
-    ip = request.remote_addr or 'local'
-    cnt = record_request(ip)
-    if cnt > DOS_THRESHOLD:
-        write_log({'event': 'dos_detected', 'ip': ip, 'count': cnt})
-        return jsonify({'ok': False, 'error': 'DoS/High-rate detected. Request blocked.'}), 429
+### **4.1 Physical Security**
+- Biometric access  
+- AI-powered CCTV  
+- RFID cards  
+- Fire suppression  
 
-    data = request.json
-    src = data.get('src')
-    dst = data.get('dst')
-    content = data.get('content', '')
-    session = data.get('session')
-    otp = data.get('otp')
+### **4.2 Network Security**
+- **Next-Generation Firewalls**
+- **IDS & IPS**
+- **Encrypted IPSec VPN**
+- **VLAN-based segmentation**
 
-    # MFA check (mock)
-    if session not in MFA_TOKENS:
-        return jsonify({'ok': False, 'error': 'Invalid MFA session. Request an OTP first.'}), 401
-    mrec = MFA_TOKENS[session]
-    if datetime.utcnow() > mrec['expires']:
-        return jsonify({'ok': False, 'error': 'OTP expired.'}), 401
-    if otp != mrec['token']:
-        write_log({'event': 'mfa_failed', 'session': session, 'src': src})
-        return jsonify({'ok': False, 'error': 'Invalid OTP.'}), 401
+### **4.3 Application & Data Security**
+- AES-256 encryption  
+- TLS 1.3  
+- Patch management  
+- RBAC  
+- Limited admin access  
 
-    # DLP check
-    blocked, reason = check_dlp(content)
-    if blocked:
-        write_log({'event': 'dlp_block', 'src': src, 'dst': dst, 'reason': reason})
-        return jsonify({'ok': False, 'error': reason}), 403
+### **4.4 Identity & Access Management**
+- **MFA for all employees**
+- **Zero Trust Login**
+- Strong password policy  
 
-    # Simulate VPN encryption
-    enc = simulate_vpn_encrypt(content.encode('utf-8'))
+### **4.5 Email & Endpoint Security**
+- EDR protection  
+- Secure email gateway (anti-phishing, anti-spoofing)
 
-    # Save to "encrypted storage" as if delivered to dst branch
-    filename = f"{int(time.time())}_{src}_to_{dst}.json"
-    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    with open(path, 'w') as f:
-        json.dump({'src': src, 'dst': dst, 'enc': enc}, f, indent=2)
+### **4.6 AI-Powered Security Monitoring**
+- Real-time anomaly detection  
+- Threat scoring  
+- UBA (User Behavior Analytics)
+""",
 
-    # Log to central SOC
-    write_log({'event': 'file_sent', 'src': src, 'dst': dst, 'file': filename})
+    "5. Branch-to-Branch Data Security Plan": """
+### **5.1 Encrypted VPN Mesh**
+- IPSec tunnels  
+- Encrypted connectivity  
 
-    # consume (delete) OTP after use
-    del MFA_TOKENS[session]
+### **5.2 Secure File Transfer System (SFTS)**
+- SFTP / FTPS  
+- Encrypted cloud with MFA  
 
-    return jsonify({'ok': True, 'saved': filename})
+### **5.3 Central Log Monitoring**
+- Logs from all branches sent to **central SOC**
 
-@app.route('/central-logs', methods=['GET'])
-def central_logs():
-    if not os.path.exists(CENTRAL_LOG):
-        return jsonify([])
-    with open(CENTRAL_LOG, 'r') as f:
-        lines = [json.loads(line) for line in f.readlines() if line.strip()]
-    # show most recent 200
-    return jsonify(lines[-200:])
+### **5.4 Data Loss Prevention**
+Blocks:
+- USB data theft  
+- External uploads  
+- Sensitive email leaks  
 
-@app.route('/storage/<path:fn>', methods=['GET'])
-def get_storage(fn):
-    # retrieve stored encrypted file (simulate branch receiving)
-    return send_from_directory(app.config['UPLOAD_FOLDER'], fn, as_attachment=True)
+### **5.5 Backup Strategy**
+- Daily incremental  
+- Weekly full  
+- DR site: **Pune**  
+""",
 
-@app.route('/decrypt', methods=['POST'])
-def decrypt_route():
-    data = request.json
-    filename = data.get('filename')
-    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if not os.path.exists(path):
-        return jsonify({'ok': False, 'error': 'file not found'}), 404
-    with open(path, 'r') as f:
-        payload = json.load(f)
-    enc = payload['enc']
-    pt = simulate_vpn_decrypt(enc)
-    if pt is None:
-        write_log({'event': 'decrypt_failed', 'file': filename})
-        return jsonify({'ok': False, 'error': 'decryption failed'}), 500
-    write_log({'event': 'file_decrypted', 'file': filename})
-    return jsonify({'ok': True, 'plaintext': pt.decode('utf-8')})
+    "6. Incident Response & Recovery": """
+### **6.1 Incident Response Team**
+Includes analysts, IT admins, forensics, network experts.
 
-if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+### **6.2 Response Procedure**
+1. Detection  
+2. Containment  
+3. Eradication  
+4. Recovery  
+5. Documentation  
+
+### **6.3 Business Continuity**
+Ensures critical services run during incidents.
+""",
+
+    "7. Results After Implementation": """
+- **80% reduction** in phishing  
+- **60% improvement** in secure communication  
+- **Zero major breaches**  
+- Faster detection  
+- Higher employee compliance  
+""",
+
+    "8. Conclusion": """
+TechNova successfully implemented a **multi-layered cybersecurity architecture**, improving infrastructure,
+communication security, monitoring, and compliance.
+
+This showcases how strong planning protects companies from modern cyber threats.
+"""
+}
+
+# ---------------------- SEARCH FILTER ----------------------
+def search_text(text, query):
+    if query.lower() in text.lower():
+        highlighted = text.replace(query, f"**🟡 {query}**")
+        return highlighted
+    return text
+
+# ---------------------- CONTENT DISPLAY ----------------------
+for section, content in case_study.items():
+    with st.expander(f"📌 {section}", expanded=False):
+        if search_query:
+            st.markdown(search_text(content, search_query), unsafe_allow_html=True)
+        else:
+            st.markdown(content, unsafe_allow_html=True)
+
+# ---------------------- PDF DOWNLOAD ----------------------
+def generate_pdf():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+
+    for section, content in case_study.items():
+        pdf.set_font("Arial", "B", 14)
+        pdf.multi_cell(0, 10, section)
+        pdf.ln(2)
+        pdf.set_font("Arial", size=11)
+        for line in content.split("\n"):
+            pdf.multi_cell(0, 7, line)
+        pdf.ln(5)
+
+    pdf_bytes = pdf.output(dest="S").encode("latin1")
+    return pdf_bytes
+
+st.write("---")
+st.subheader("📄 Download Case Study")
+
+pdf_file = generate_pdf()
+st.download_button(
+    label="⬇️ Download PDF",
+    data=pdf_file,
+    file_name="TechNova_Case_Study.pdf",
+    mime="application/pdf"
+)
